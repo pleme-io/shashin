@@ -3,13 +3,13 @@ name = "shashin"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.89.0"
-description = "Shashin (写真) — screenshot tool for macOS and Linux"
+description = "Shashin (写真) — GPU-rendered image viewer with gallery, metadata, and effects"
 homepage = "https://github.com/pleme-io/shashin"
 repository = "https://github.com/pleme-io/shashin"
 readme = "README.md"
 license = "MIT"
-categories = ["os::macos-apis"]
-keywords = ["screenshot", "capture", "macos", "annotation"]
+categories = ["multimedia::images", "gui"]
+keywords = ["image-viewer", "gpu", "gallery", "exif", "wgpu"]
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
@@ -19,14 +19,51 @@ missing_panics_doc = "allow"
 [profile.release]
 codegen-units = 1
 lto = true
+opt-level = "z"
+strip = true
 
 [dependencies]
-shikumi = { git = "ssh://git@github.com/pleme-io/shikumi" }
-arc-swap = "1.8"
+# pleme-io GPU stack
+garasu = { git = "https://github.com/pleme-io/garasu" }
+madori = { git = "https://github.com/pleme-io/madori" }
+egaku = { git = "https://github.com/pleme-io/egaku" }
+
+# pleme-io config
+shikumi = { git = "https://github.com/pleme-io/shikumi" }
+
+# wgpu (must match garasu)
+wgpu = "25"
+
+# Image loading
+image = { version = "0.25", features = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "avif"] }
+
+# EXIF metadata
+kamadak-exif = "0.6"
+
+# CLI
 clap = { version = "4", features = ["derive"] }
+
+# Serialization
 serde = { version = "1.0", features = ["derive"] }
+
+# Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Async runtime (for thumbnail generation)
 tokio = { version = "1", features = ["full"] }
-image = "0.25"
+
+# GPU utilities
+bytemuck = { version = "1", features = ["derive"] }
+bytemuck_derive = "1"
+glyphon = "0.9"
+
+# Utilities
+arc-swap = "1.8"
 dirs = "6.0"
+anyhow = "1"
+thiserror = "2.0"
+
+[dev-dependencies]
+tempfile = "3"
+serde_json = "1"
