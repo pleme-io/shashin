@@ -14,6 +14,7 @@
 pub mod config;
 pub mod gallery;
 pub mod input;
+pub mod mcp;
 pub mod metadata;
 pub mod platform;
 pub mod render;

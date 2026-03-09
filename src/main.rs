@@ -5,6 +5,7 @@
 mod config;
 mod gallery;
 mod input;
+mod mcp;
 mod metadata;
 mod platform;
 mod render;
@@ -52,6 +53,8 @@ enum Command {
         #[arg(short, long)]
         interval: Option<f32>,
     },
+    /// Run as MCP server (stdio transport) for Claude Code integration.
+    Mcp,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -59,13 +62,24 @@ fn main() -> anyhow::Result<()> {
         .with_env_filter(
             EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
         )
+        .with_writer(std::io::stderr)
         .init();
 
     let cli = Cli::parse();
+
+    // Handle MCP subcommand before loading GUI config
+    if let Some(Command::Mcp) = cli.command {
+        let rt = tokio::runtime::Runtime::new()?;
+        rt.block_on(mcp::run())
+            .map_err(|e| anyhow::anyhow!("MCP server error: {e}"))?;
+        return Ok(());
+    }
+
     let config = config::load_config();
 
     // Determine what to open and in which mode
     match cli.command {
+        Some(Command::Mcp) => unreachable!("handled above"),
         Some(Command::Open { path }) => run_viewer(&config, &path),
         Some(Command::Gallery { path }) => {
             let dir = path.unwrap_or_else(|| PathBuf::from("."));
