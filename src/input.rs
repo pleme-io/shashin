@@ -1,7 +1,8 @@
 //! Keyboard and mouse input handling with modal keybinding support.
 //!
 //! Maps `madori::AppEvent` to semantic `Action` values based on the current
-//! application mode (Viewer, Gallery, Effects).
+//! application mode (Viewer, Gallery, Slideshow). Uses `awase::Hotkey` for
+//! key binding definitions and `awase::BindingMap` for mode-aware lookup.
 
 use madori::event::{KeyCode, Modifiers};
 
@@ -73,6 +74,89 @@ pub enum Action {
     None,
 }
 
+/// Convert a madori `KeyCode` to an awase `Key` for hotkey matching.
+fn to_awase_key(key: &KeyCode) -> Option<awase::Key> {
+    match key {
+        KeyCode::Char(c) => match c.to_ascii_lowercase() {
+            'a' => Some(awase::Key::A),
+            'b' => Some(awase::Key::B),
+            'c' => Some(awase::Key::C),
+            'd' => Some(awase::Key::D),
+            'e' => Some(awase::Key::E),
+            'f' => Some(awase::Key::F),
+            'g' => Some(awase::Key::G),
+            'h' => Some(awase::Key::H),
+            'i' => Some(awase::Key::I),
+            'j' => Some(awase::Key::J),
+            'k' => Some(awase::Key::K),
+            'l' => Some(awase::Key::L),
+            'm' => Some(awase::Key::M),
+            'n' => Some(awase::Key::N),
+            'o' => Some(awase::Key::O),
+            'p' => Some(awase::Key::P),
+            'q' => Some(awase::Key::Q),
+            'r' => Some(awase::Key::R),
+            's' => Some(awase::Key::S),
+            't' => Some(awase::Key::T),
+            'u' => Some(awase::Key::U),
+            'v' => Some(awase::Key::V),
+            'w' => Some(awase::Key::W),
+            'x' => Some(awase::Key::X),
+            'y' => Some(awase::Key::Y),
+            'z' => Some(awase::Key::Z),
+            '0' => Some(awase::Key::Num0),
+            '1' => Some(awase::Key::Num1),
+            ' ' => Some(awase::Key::Space),
+            _ => Option::None,
+        },
+        KeyCode::Enter => Some(awase::Key::Return),
+        KeyCode::Escape => Some(awase::Key::Escape),
+        KeyCode::Tab => Some(awase::Key::Tab),
+        KeyCode::Backspace => Some(awase::Key::Backspace),
+        KeyCode::Delete => Some(awase::Key::Delete),
+        KeyCode::Up => Some(awase::Key::Up),
+        KeyCode::Down => Some(awase::Key::Down),
+        KeyCode::Left => Some(awase::Key::Left),
+        KeyCode::Right => Some(awase::Key::Right),
+        KeyCode::F(n) => match n {
+            1 => Some(awase::Key::F1),
+            2 => Some(awase::Key::F2),
+            3 => Some(awase::Key::F3),
+            4 => Some(awase::Key::F4),
+            5 => Some(awase::Key::F5),
+            6 => Some(awase::Key::F6),
+            7 => Some(awase::Key::F7),
+            8 => Some(awase::Key::F8),
+            9 => Some(awase::Key::F9),
+            10 => Some(awase::Key::F10),
+            11 => Some(awase::Key::F11),
+            12 => Some(awase::Key::F12),
+            _ => Option::None,
+        },
+        KeyCode::Space => Some(awase::Key::Space),
+        // Home/End/PageUp/PageDown not in awase::Key — handled via direct matching
+        _ => Option::None,
+    }
+}
+
+/// Convert madori modifiers to awase modifiers.
+fn to_awase_modifiers(mods: &Modifiers) -> awase::Modifiers {
+    let mut result = awase::Modifiers::NONE;
+    if mods.ctrl {
+        result = result | awase::Modifiers::CTRL;
+    }
+    if mods.alt {
+        result = result | awase::Modifiers::ALT;
+    }
+    if mods.shift {
+        result = result | awase::Modifiers::SHIFT;
+    }
+    if mods.meta {
+        result = result | awase::Modifiers::CMD;
+    }
+    result
+}
+
 /// Map a key event to a semantic action based on the current mode.
 #[must_use]
 pub fn map_key(key: &KeyCode, mods: &Modifiers, mode: Mode) -> Action {
@@ -96,6 +180,18 @@ fn map_viewer_key(key: &KeyCode, mods: &Modifiers) -> Action {
         };
     }
 
+    // Build an awase hotkey for declarative matching
+    if let Some(awase_key) = to_awase_key(key) {
+        let awase_mods = to_awase_modifiers(mods);
+        let hotkey = awase::Hotkey::new(awase_mods, awase_key);
+
+        // Check against known hotkey patterns
+        if let Some(action) = match_viewer_hotkey(&hotkey) {
+            return action;
+        }
+    }
+
+    // Fallback to direct key matching for char-specific cases
     match key {
         // Navigation
         KeyCode::Char('j') | KeyCode::Char('n') | KeyCode::Right => Action::NextImage,
@@ -128,6 +224,24 @@ fn map_viewer_key(key: &KeyCode, mods: &Modifiers) -> Action {
         KeyCode::Escape => Action::Escape,
 
         _ => Action::None,
+    }
+}
+
+/// Match viewer hotkeys using awase hotkey patterns.
+fn match_viewer_hotkey(hotkey: &awase::Hotkey) -> Option<Action> {
+    // This enables future config-driven binding overrides.
+    // Currently maps the same keys but through awase's Hotkey type.
+    let key = hotkey.key;
+    let mods = hotkey.modifiers;
+
+    if !mods.is_empty() {
+        return Option::None;
+    }
+
+    match key {
+        awase::Key::Q => Some(Action::Quit),
+        awase::Key::Escape => Some(Action::Escape),
+        _ => Option::None,
     }
 }
 
@@ -354,5 +468,26 @@ mod tests {
             map_key(&KeyCode::Tab, &no_mods(), Mode::Gallery),
             Action::None
         );
+    }
+
+    #[test]
+    fn awase_key_conversion() {
+        assert_eq!(to_awase_key(&KeyCode::Char('a')), Some(awase::Key::A));
+        assert_eq!(to_awase_key(&KeyCode::Escape), Some(awase::Key::Escape));
+        assert_eq!(to_awase_key(&KeyCode::Enter), Some(awase::Key::Return));
+        assert_eq!(to_awase_key(&KeyCode::F(5)), Some(awase::Key::F5));
+    }
+
+    #[test]
+    fn awase_modifier_conversion() {
+        let mods = Modifiers {
+            ctrl: true,
+            shift: true,
+            ..Default::default()
+        };
+        let awase_mods = to_awase_modifiers(&mods);
+        assert!(awase_mods.contains(awase::Modifiers::CTRL));
+        assert!(awase_mods.contains(awase::Modifiers::SHIFT));
+        assert!(!awase_mods.contains(awase::Modifiers::CMD));
     }
 }

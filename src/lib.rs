@@ -18,4 +18,5 @@ pub mod mcp;
 pub mod metadata;
 pub mod platform;
 pub mod render;
+pub mod scripting;
 pub mod viewer;

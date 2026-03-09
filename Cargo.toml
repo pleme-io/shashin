@@ -31,6 +31,10 @@ egaku = { git = "https://github.com/pleme-io/egaku" }
 # pleme-io config
 shikumi = { git = "https://github.com/pleme-io/shikumi" }
 
+# pleme-io scripting + hotkeys
+soushi = { git = "https://github.com/pleme-io/soushi" }
+awase = { git = "https://github.com/pleme-io/awase" }
+
 # pleme-io MCP server scaffold
 kaname = { git = "https://github.com/pleme-io/kaname" }
 rmcp = { version = "0.15", features = ["server", "transport-io"] }
