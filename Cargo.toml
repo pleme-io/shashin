@@ -26,6 +26,7 @@ strip = true
 # pleme-io GPU stack
 garasu = { git = "https://github.com/pleme-io/garasu" }
 madori = { git = "https://github.com/pleme-io/madori" }
+ishou-tokens = { git = "https://github.com/pleme-io/ishou", features = ["wgpu"] }
 egaku = { git = "https://github.com/pleme-io/egaku" }
 
 # pleme-io config
